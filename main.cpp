@@ -4,9 +4,7 @@
 #include <string>
 #include <vector>
 #include <thread>
-//#include <mutex>
 #include <future>
-//#include "progressbar.hpp"
 #include "tqdm.h"
 #include "cxxopts.hpp"
 
@@ -16,10 +14,7 @@ using namespace cxxopts;
 typedef vector<string> vs;
 
 map<string, map<char, vs>> network; // network[node][type] = adjlist
-//progressbar* bar;
-//tqdm* bar;
 atomic<int> progress(0);
-mutex mx;
 
 vector<string> split(const string &text, char sep) {
     vector<string> tokens;
@@ -69,12 +64,7 @@ vector<vs> do_metapath_randomwalk(
         total_walks.push_back(walk);
     }
 
-//    mx.lock();
     progress++;
-////    bar->update();
-//    bar->progress(1);
-//    mx.unlock();
-
     return total_walks;
 }
 
@@ -130,9 +120,6 @@ int main(int argc, char **argv) {
 
 
     int total = node_list.size();
-//    cout << total << endl;
-//    bar = new progressbar(total);
-//    bar = new tqdm(total);
     vector<future<vector<vs>>> futures;
     futures.reserve(total);
 
@@ -143,7 +130,6 @@ int main(int argc, char **argv) {
         futures.push_back(async(launch::async, do_metapath_randomwalk, start_node, metapath, exclude, num_walks, walk_length));
     }
 
-//    cout << "\nwriting result...";
     ofstream out_file(output);
     for (auto& f: futures) {
         vector<vs> walks = f.get();
