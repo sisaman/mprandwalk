@@ -80,18 +80,27 @@ void check_progress(int total) {
 
 
 int main(int argc, char **argv) {
-    Options options("mp2vecwalk", "Building random walk file to be used by metapath2vec");
+    Options options("mprandwalk", "A meta-path-based random walk generator");
     options.add_options()
-            ("input", "Input file as an edge list", value<string>())
-            ("output", "Output path for writing result", value<string>())
-            ("metapath", "Metapath for walk", value<string>())
-            ("exclude", "Node types to be excluded in the walk (default="")",
-                    value<string>()->default_value(""))
-            ("num-walks", "Number of walks per node (default=1000)",
-                    value<int>()->default_value("100"))
-            ("walk-length", "Length of each walk (default=100)",
-                    value<int>()->default_value("100"));
+            ("i,input", "Input file as an adjacency list", value<string>(), "<Path>")
+            ("o,output", "Output file for writing result", value<string>(), "<Path>")
+            ("m,metapath", "Metapath to guide the random walk (each character denotes a node type)", value<string>(), "<String>")
+            ("e,exclude", "Node types from metapath to be excluded from the result",
+                    value<string>()->default_value(""), "<String>")
+            ("n,num-walks", "Number of walks per node",
+                    value<int>()->default_value("100"), "<Int>")
+            ("w,walk-length", "Length of each walk",
+                    value<int>()->default_value("100"), "<Int>")
+            ("h,help", "Display help");
     auto result = options.parse(argc, argv);
+
+    if (!(result.count("input") && result.count("output") && result.count("metapath")) || result.count("help")) {
+        cout << options.help() << endl;
+        cout << "Example:\n  mprandwalk --input data/adjlist.txt --output result/walks.txt "
+                "--metapath vapav --exclude ap --num-walks 10 --walk-length 20" << endl;
+        exit(0);
+    }
+
     string input = result["input"].as<string>();
     string output = result["output"].as<string>();
     string metapath = result["metapath"].as<string>();
