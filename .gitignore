@@ -77,3 +77,9 @@ fabric.properties
 
 # CMake
 cmake-build-debug
+
+# Datasets
+data
+
+# Mac files
+.DS_Store
