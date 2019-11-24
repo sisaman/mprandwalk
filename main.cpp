@@ -11,9 +11,11 @@
 using namespace std;
 using namespace cxxopts;
 
-typedef vector<string> vs;
+typedef vector<int> vi;
 
-map<string, map<char, vs>> network; // network[node][type] = adjlist
+vector<string> nodes;
+map<string, int> node_map;
+map<int, map<char, vi>> network; // network[node][type] = adjlist
 atomic<int> progress(0);
 
 vector<string> split(const string &text, char sep) {
@@ -27,15 +29,28 @@ vector<string> split(const string &text, char sep) {
     return tokens;
 }
 
+inline const char get_node_type(int& node)  {
+    return nodes[node][0];
+}
 
-vector<vs> do_metapath_randomwalk(
-        const string& starting_node, const string& metapath, const string& exclude,
+inline int get_node_index(string& node) {
+    if (node_map.count(node)) return node_map[node];
+    else {
+        node_map[node] = nodes.size();
+        nodes.emplace_back(node);
+        return nodes.size() - 1;
+    }
+}
+
+
+vector<vi> do_metapath_randomwalk(
+        const int& starting_node, const string& metapath, const string& exclude,
         const int& num_walks = 1000, const int& walk_length = 100) {
 
-    vector<vs> total_walks;
+    vector<vi> total_walks;
     total_walks.reserve(num_walks);
 
-    vector<string> walk;
+    vector<int> walk;
     walk.reserve(walk_length);
 
     string path;
@@ -46,17 +61,17 @@ vector<vs> do_metapath_randomwalk(
     for (int walk_counter = 0; walk_counter < num_walks; walk_counter++) {
 
         walk.clear();
-        string current_node = starting_node;
+        int current_node = starting_node;
 
         for (int d = 0; d < walk_length; d++) {
 
-            char node_type = current_node[0];
+            char node_type = get_node_type(current_node);
             if (exclude.find(node_type) == string::npos) {
                 walk.push_back(current_node);
             }
 
             // walk to a random neighbor according to the path type
-            vs &neighbors = network[current_node][path[d]];
+            vector<int> &neighbors = network[current_node][path[d]];
             int random_index = rand() % neighbors.size();
             current_node = neighbors[random_index];
         }
@@ -109,42 +124,49 @@ int main(int argc, char **argv) {
     int walk_length = result["walk-length"].as<int>();
 
     ifstream input_file(input);
-    string node, source, line;
+    string source_str, line;
+    int source, target;
+    char node_type;
 
     cout << "reading network...\n";
-    vector<string> tokens;
+    nodes.reserve(200000);
 
     while (getline(input_file, line)) {
-        tokens = split(line, ' ');
-        source = tokens[0];
-        for (int i = 1; i < tokens.size(); i++)
-            network[source][tokens[i][0]].push_back(tokens[i]);
+        vector<string> tokens = split(line, ' ');
+        source = get_node_index(tokens[0]);
+
+        for (int i = 1; i < tokens.size(); i++) {
+            target = get_node_index(tokens[i]);
+            node_type = get_node_type(target);
+            network[source][node_type].push_back(target);
+        }
     }
 
-    vector<string> node_list;
-    for (auto const &pair : network) {
-        if (pair.first[0] == metapath[0])
-            node_list.emplace_back(pair.first);
+    vector<int> starting_nodes;
+    for (int i = 0; i < nodes.size(); i++) {
+        if (metapath[0] == get_node_type(i))
+            starting_nodes.emplace_back(i);
     }
 
 
-    int total = node_list.size();
-    vector<future<vector<vs>>> futures;
+    int total = starting_nodes.size();
+    vector<future<vector<vi>>> futures;
     futures.reserve(total);
 
     cout << "running random walks...\n";
     thread progress_thread(&check_progress, total);
 
-    for (string const &start_node : node_list) {
+    for (int const &start_node : starting_nodes) {
+//        do_metapath_randomwalk(start_node, metapath, exclude, num_walks, walk_length);
         futures.push_back(async(launch::async, do_metapath_randomwalk, start_node, metapath, exclude, num_walks, walk_length));
     }
 
     ofstream out_file(output);
     for (auto& f: futures) {
-        vector<vs> walks = f.get();
-        for (const vs& v : walks) {
-            for ( const string& s : v) {
-                out_file << s << ' ';
+        vector<vi> walks = f.get();
+        for (const vi& v : walks) {
+            for ( const int& s : v) {
+                out_file << nodes[s] << ' ';
             }
 
             out_file << endl;
