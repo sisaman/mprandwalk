@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
     char node_type;
 
     cout << "reading network...\n";
-    nodes.reserve(200000);
+    nodes.reserve(10000);
 
     while (getline(input_file, line)) {
         vector<string> tokens = split(line, ' ');
